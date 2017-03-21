@@ -34,8 +34,12 @@ namespace BenDownloader
         private static Semaphore s_lock;
 
         private static object s_logLock = new object();
-        private static readonly ConfigurationFile s_openMicConfigurationFile = ConfigurationFile.Open(Directory.GetCurrentDirectory() + "\\openMIC.exe.Config");
+        private static readonly ConfigurationFile s_openMicConfigurationFile;
 
+        static Program()
+        {
+            s_openMicConfigurationFile = ConfigurationFile.Open("openMIC.exe.config");
+        }
         public static ConfigurationFile OpenMiConfigurationFile
         {
             get
