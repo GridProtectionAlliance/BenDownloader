@@ -23,9 +23,25 @@
 
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Configuration;
+using System.Diagnostics;
+using System.Linq;
+using System.Net;
+using System.Net.Mail;
+using System.Net.Mime;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using GSF;
 using GSF.Configuration;
+using GSF.Data;
+using Microsoft.VisualBasic;
+using Microsoft.VisualBasic.CompilerServices;
+using Microsoft.VisualBasic.FileIO;
+using FileSystem = Microsoft.VisualBasic.FileIO.FileSystem;
 
 namespace BenDownloader
 {
@@ -33,13 +49,9 @@ namespace BenDownloader
     {
         private static Semaphore s_lock;
 
-        private static object s_logLock = new object();
-        private static readonly ConfigurationFile s_openMicConfigurationFile;
+        private static readonly object s_logLock = new object();
+        private static readonly ConfigurationFile s_openMicConfigurationFile = ConfigurationFile.Open(Directory.GetCurrentDirectory() + "\\openMIC.exe.Config");
 
-        static Program()
-        {
-            s_openMicConfigurationFile = ConfigurationFile.Open("openMIC.exe.config");
-        }
         public static ConfigurationFile OpenMiConfigurationFile
         {
             get
@@ -54,7 +66,7 @@ namespace BenDownloader
 
             if (setting > 0)
                 s_lock = new Semaphore(setting, setting, "BenRunner");
-            BenRunner br;
+
             try
             {
                 if (args.Length != 2)
@@ -63,14 +75,14 @@ namespace BenDownloader
                     return;
                 }
 
-                s_lock?.WaitOne();
-                br = new BenRunner(int.Parse(args[0]), int.Parse(args[1]));
-                if (!br.XferAllFiles())
+                if (s_lock?.WaitOne(5000 * 60) ?? true)
                 {
-                    br.Dispose();
-                    throw new Exception("BEN Downloader failed...");
+                    using (BenRunner br = new BenRunner(int.Parse(args[0]), int.Parse(args[1])))
+                    {
+                        if (!br.XferAllFiles())
+                            throw new Exception("BEN Downloader failed...");
+                    }
                 }
-                br.Dispose();
             }
             catch (Exception ex)
             {
@@ -78,6 +90,7 @@ namespace BenDownloader
             }
             finally
             {
+
                 s_lock?.Release();
             }
 
@@ -103,7 +116,6 @@ namespace BenDownloader
 
             lock (s_logLock)
             {
-
                 try
                 {
                     Directory.CreateDirectory(path + "Logs");
