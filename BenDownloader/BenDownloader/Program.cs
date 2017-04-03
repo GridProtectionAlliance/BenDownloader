@@ -26,6 +26,7 @@ using System;
 using System.IO;
 using System.Threading;
 using GSF.Configuration;
+using GSF.IO;
 
 namespace BenDownloader
 {
@@ -46,6 +47,7 @@ namespace BenDownloader
 
         static void Main(string[] args)
         {
+
             int setting = s_openMicConfigurationFile.Settings["systemSettings"]["BenRunnerInstanceCount"]?.ValueAsInt32() ?? 0;
 
             if (setting > 0)
@@ -63,6 +65,8 @@ namespace BenDownloader
                 {
                     using (BenRunner br = new BenRunner(int.Parse(args[0]), int.Parse(args[1])))
                     {
+                        AppDomain.CurrentDomain.ProcessExit += (sender, arg) => br.Dispose();
+
                         if (!br.XferAllFiles())
                             throw new Exception("BEN Downloader failed...");
                     }
@@ -106,7 +110,7 @@ namespace BenDownloader
                     FileInfo fi = new FileInfo(path + "Logs\\BenDownloaderLogFile.txt");
                     if (fi.Exists && fi.Length > 1048576)
                     {
-                        fi.MoveTo(path + $"Logs\\BenDownloaderLogFile[{DateTime.UtcNow.ToString("MM-dd-yy")}].txt");
+                        fi.MoveTo(FilePath.GetUniqueFilePathWithBinarySearch(path + $"Logs\\BenDownloaderLogFile[{DateTime.UtcNow.ToString("MM-dd-yy")}].txt"));
                     }
 
                     using (StreamWriter w = File.AppendText(path + "Logs\\BenDownloaderLogFile.txt"))
